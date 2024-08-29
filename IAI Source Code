@@ -1,0 +1,491 @@
+# # # ==================================================================================================================
+# # # =================================================================================================================
+# import cv2
+# import pyowm
+# from pyowm.utils.config import get_default_config
+# import pyttsx3
+# import datetime
+# import requests
+# import os
+# import smtplib
+# import speech_recognition as sr
+# import yt_dlp
+
+# class TonyAI:
+#     def __init__(self, api_key, known_face_encodings, known_face_names):
+#         self.api_key = api_key
+#         self.config_dict = get_default_config()
+#         self.config_dict['language'] = 'en'
+#         self.owm = pyowm.OWM(self.api_key, self.config_dict)
+#         self.mgr = self.owm.weather_manager()
+#         self.speaker = pyttsx3.init()
+#         self.known_face_encodings = known_face_encodings
+#         self.known_face_names = known_face_names
+
+#         # Initialize OpenCV face detector and recognizer
+#         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+#         self.face_recognizer = cv2.face.LBPHFaceRecognizer_create()
+
+#         # If known faces are provided, train the recognizer
+#         if known_face_encodings and known_face_names:
+#             self.train_face_recognizer()
+
+#     def speak(self, text):
+#         self.speaker.say(text)
+#         self.speaker.runAndWait()
+
+#     def add_face(self, image_path, name):
+#         try:
+#             image = cv2.imread(image_path)
+#             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+#             faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+#             if len(faces) == 0:
+#                 raise ValueError("No face found in the image.")
+            
+#             # Use the first detected face
+#             (x, y, w, h) = faces[0]
+#             face_image = gray[y:y+h, x:x+w]
+#             self.known_face_encodings.append(face_image)
+#             self.known_face_names.append(name)
+#             self.train_face_recognizer()
+
+#             success_msg = f"Face for {name} added and recognizer trained successfully."
+#             self.speak(success_msg)
+#             print(success_msg)
+#         except Exception as e:
+#             error_msg = f"An error occurred while adding face: {e}"
+#             self.speak(error_msg)
+#             print(error_msg)
+
+#     def train_face_recognizer(self):
+#         face_images = self.known_face_encodings
+#         labels = list(range(len(face_images)))
+#         self.face_recognizer.train(face_images, np.array(labels))
+
+#     def get_weather(self, city, t, future=False):
+#         try:
+#             if future:
+#                 forecast = self.mgr.forecast_at_place(city, '3h').forecast
+#                 weather = forecast.weathers[0]
+#             else:
+#                 observation = self.mgr.weather_at_place(city)
+#                 weather = observation.weather
+                
+#             temperature_c = weather.temperature('celsius')['temp']
+#             temperature_f = weather.temperature('fahrenheit')['temp']
+#             pressure = weather.pressure['press']
+#             humidity = weather.humidity
+#             weather_description = weather.detailed_status
+#             wind_speed = weather.wind()['speed']
+
+#             weather_info = f"Weather of {city}:"
+#             self.speak(weather_info)
+#             print(weather_info)
+
+#             if t == 1:
+#                 temp_info = f"Temperature in Celsius: {temperature_c} °C"
+#             elif t == 2:
+#                 temp_info = f"Temperature in Fahrenheit: {temperature_f} °F"
+#             else:
+#                 error_msg = f"{t} is an Invalid Input"
+#                 self.speak(error_msg)
+#                 print(error_msg)
+#                 return
+
+#             self.speak(temp_info)
+#             print(temp_info)
+            
+#             pressure_info = f"Pressure is {pressure} hPa"
+#             humidity_info = f"Humidity is {humidity} %"
+#             weather_desc_info = f"Weather Description: {weather_description}"
+#             wind_speed_info = f"Wind Speed is {wind_speed} m/s"
+
+#             self.speak(pressure_info)
+#             self.speak(humidity_info)
+#             self.speak(weather_desc_info)
+#             self.speak(wind_speed_info)
+
+#             print(pressure_info)
+#             print(humidity_info)
+#             print(weather_desc_info)
+#             print(wind_speed_info)
+
+#         except Exception as e:
+#             error_msg = f"An error occurred: {e}"
+#             self.speak(error_msg)
+#             print(error_msg)
+
+#     def recognize_face(self):
+#         video_capture = cv2.VideoCapture(0)
+#         while True:
+#             ret, frame = video_capture.read()
+#             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+#             faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+#             for (x, y, w, h) in faces:
+#                 face_image = gray[y:y+h, x:x+w]
+#                 label, confidence = self.face_recognizer.predict(face_image)
+#                 name = self.known_face_names[label] if confidence < 100 else "Unknown"
+
+#                 self.speak(f"Hello {name}")
+#                 print(f"Hello {name}")
+
+#                 # Draw a rectangle around the face
+#                 cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+
+#             cv2.imshow('Video', frame)
+
+#             if cv2.waitKey(1) & 0xFF == ord('q'):
+#                 break
+
+#         video_capture.release()
+#         cv2.destroyAllWindows()
+
+# # Initialize the pyttsx3 engine
+# engine = pyttsx3.init()
+# voices = engine.getProperty('voices')
+# engine.setProperty('voice', voices[0].id)
+
+# def speak(audio):
+#     engine.say(audio)
+#     engine.runAndWait()
+
+# def wishMe():
+#     hour = int(datetime.datetime.now().hour)
+#     if hour >= 0 and hour < 12:
+#         speak("Good Morning!")
+#     elif hour >= 12 and hour < 18:
+#         speak("Good Afternoon!")   
+#     else:
+#         speak("Good Evening!")  
+#     speak("I am Tony Sir. Please tell me how may I help you Sir")       
+
+# def takeCommand():
+#     r = sr.Recognizer()
+#     with sr.Microphone() as source:
+#         print("Listening...")
+#         r.pause_threshold = 1
+#         audio = r.listen(source)
+
+#     try:
+#         print("Recognizing...")
+#         query = r.recognize_google(audio, language='en-IN')
+#         print(f"User said: {query}\n")
+#     except Exception as e:
+#         print(e)
+#         print("Say that again please...")
+#         return "None"
+#     return query
+
+# def search_duckduckgo(query):
+#     response = requests.get(f"https://api.duckduckgo.com/?q={query}&format=json&pretty=1")
+#     data = response.json()
+#     return data.get('AbstractText', "No information found.")
+
+# def sendEmail(to, content):
+#     server = smtplib.SMTP('smtp.gmail.com', 587)
+#     server.ehlo()
+#     server.starttls()
+#     server.login('ahmadleo498@gmail.com', os.getenv('EMAIL_PASSWORD'))
+#     server.sendmail('ahmadleo498@gmail.com', to, content)
+#     server.close()
+
+# def download_youtube_content(url, download_path):
+#     ydl_opts = {'format': 'best', 'outtmpl': f'{download_path}/%(title)s.%(ext)s'}
+#     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+#         ydl.download([url])
+
+# if __name__ == "__main__":
+#     api_key = "7271cae763955ac86c0b3dbdcd7f7f55"
+#     known_face_encodings = [
+#         # Add face images as numpy arrays here
+#     ]
+#     known_face_names = [
+#         # Add names corresponding to face images here
+#     ]
+
+#     tony_ai = TonyAI(api_key, known_face_encodings, known_face_names)
+    
+#     wishMe()
+#     while True:
+#         query = takeCommand().lower()
+#         if 'time' in query:
+#             strTime = datetime.datetime.now().strftime("%H:%M:%S")    
+#             speak(f"Ahmad, the time is {strTime}")
+
+#         elif 'date' in query:
+#             current_datetime = datetime.datetime.now()
+#             formatted_date = current_datetime.strftime("%Y-%m-%d")
+#             speak(f"Today's date is {formatted_date}")
+#             print(f"Today's date is {formatted_date}")
+
+#         elif 'open code' in query:
+#             codePath = r"D:\Python\PYTHON PROGECTS\TONY AI"
+#             os.startfile(codePath)
+
+#         elif 'send email' in query:
+#             try:
+#                 speak("What should I say?")
+#                 content = str(input("Enter The Content You Wanted To Send To Person : "))
+#                 to = "ahmadleo254@gmail.com"    
+#                 sendEmail(to, content)
+#                 speak("Email has been sent!")
+#             except Exception as e:
+#                 print(e)
+#                 speak("Sorry Ahmad Bhai. I am not able to send this email") 
+
+#         elif 'weather' in query:
+#             speak("Which city?")
+#             city = takeCommand()
+#             speak("Temperature in Celsius or Fahrenheit? (1 for Celsius, 2 for Fahrenheit)")
+#             try:
+#                 t = int(takeCommand())
+#             except ValueError:
+#                 t = 1  
+#             speak("Do you want the future weather forecast? (yes or no)")
+#             future = takeCommand().strip().lower() == 'yes'
+#             tony_ai.get_weather(city, t, future)
+        
+#         elif 'download' in query:
+#             speak("Please input the link here.")
+#             url = str(input("Enter URL : "))
+#             download_path = "D:/Python/PYTHON PROGECTS"
+#             download_youtube_content(url, download_path)
+        
+#         elif 'check' in query or 'face' in query:
+#             tony_ai.recognize_face()
+        
+#         elif 'add' in query:
+#             image_path = "D:/Python/PYTHON PROGECTS/TONY AI/A..jpg" 
+#             name = "Ahmad"
+#             tony_ai.add_face(image_path, name)
+
+#         elif 'exit' in query or 'quit' in query:
+#             speak("Goodbye Ahmad !")
+#             break
+
+#         else:
+#             print("No query matched")
+
+
+# ## ========================================================================================================================
+import cv2
+import numpy as np
+import pyowm
+from pyowm.utils.config import get_default_config
+import pyttsx3
+import datetime
+import requests
+import os
+import smtplib
+import speech_recognition as sr
+import yt_dlp
+import getpass
+
+class TonyAI:
+    def __init__(self, api_key, password=None):
+        self.api_key = api_key
+        self.config_dict = get_default_config()
+        self.config_dict['language'] = 'en'
+        self.owm = pyowm.OWM(self.api_key, self.config_dict)
+        self.mgr = self.owm.weather_manager()
+        self.speaker = pyttsx3.init()
+
+        # Initialize password (can be None initially)
+        self.password = password
+
+    def speak(self, text):
+        self.speaker.say(text)
+        self.speaker.runAndWait()
+
+    def add_password(self):
+        while True:
+            password = getpass.getpass("Create a new password: ")
+            confirm_password = getpass.getpass("Confirm your password: ")
+            if password == confirm_password:
+                self.password = password
+                print("Password set successfully.")
+                self.speak("Password set successfully.")
+                break
+            else:
+                print("Passwords do not match. Please try again.")
+                self.speak("Passwords do not match. Please try again.")
+
+    def verify_password(self, input_password):
+        if self.password is None:
+            error_msg = "No password set. Please set a password first."
+            self.speak(error_msg)
+            print(error_msg)
+            return False
+
+        if input_password == self.password:
+            success_msg = "Password is correct. Access granted."
+            self.speak(success_msg)
+            print(success_msg)
+            return True
+        else:
+            error_msg = "Incorrect password. Access denied."
+            self.speak(error_msg)
+            print(error_msg)
+            return False
+
+    def get_weather(self, city, t, future=False):
+        try:
+            if future:
+                forecast = self.mgr.forecast_at_place(city, '3h').forecast
+                weather = forecast.weathers[0]
+            else:
+                observation = self.mgr.weather_at_place(city)
+                weather = observation.weather
+                
+            temperature_c = weather.temperature('celsius')['temp']
+            temperature_f = weather.temperature('fahrenheit')['temp']
+            pressure = weather.pressure['press']
+            humidity = weather.humidity
+            weather_description = weather.detailed_status
+            wind_speed = weather.wind()['speed']
+
+            weather_info = f"Weather of {city}:"
+            self.speak(weather_info)
+            print(weather_info)
+
+            if t == 1:
+                temp_info = f"Temperature in Celsius: {temperature_c} °C"
+            elif t == 2:
+                temp_info = f"Temperature in Fahrenheit: {temperature_f} °F"
+            else:
+                error_msg = f"{t} is an Invalid Input"
+                self.speak(error_msg)
+                print(error_msg)
+                return
+
+            self.speak(temp_info)
+            print(temp_info)
+            
+            pressure_info = f"Pressure is {pressure} hPa"
+            humidity_info = f"Humidity is {humidity} %"
+            weather_desc_info = f"Weather Description: {weather_description}"
+            wind_speed_info = f"Wind Speed is {wind_speed} m/s"
+
+            self.speak(pressure_info)
+            self.speak(humidity_info)
+            self.speak(weather_desc_info)
+            self.speak(wind_speed_info)
+
+            print(pressure_info)
+            print(humidity_info)
+            print(weather_desc_info)
+            print(wind_speed_info)
+
+        except Exception as e:
+            error_msg = f"An error occurred: {e}"
+            self.speak(error_msg)
+            print(error_msg)
+
+# Initialize the pyttsx3 engine
+engine = pyttsx3.init()
+voices = engine.getProperty('voices')
+engine.setProperty('voice', voices[0].id)
+
+def speak(audio):
+    engine.say(audio)
+    engine.runAndWait()
+
+def wishMe():
+    hour = int(datetime.datetime.now().hour)
+    if hour >= 0 and hour < 12:
+        speak("Good Morning!")
+    elif hour >= 12 and hour < 18:
+        speak("Good Afternoon!")   
+    else:
+        speak("Good Evening!")  
+    speak("I am Tony Sir. Please tell me how may I help you Sir")       
+
+def takeCommand():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Listening...")
+        r.pause_threshold = 1
+        audio = r.listen(source)
+
+    try:
+        print("Recognizing...")
+        query = r.recognize_google(audio, language='en-IN')
+        print(f"User said: {query}\n")
+    except Exception as e:
+        print(e)
+        print("Say that again please...")
+        return "None"
+    return query
+
+def search_duckduckgo(query):
+    response = requests.get(f"https://api.duckduckgo.com/?q={query}&format=json&pretty=1")
+    data = response.json()
+    return data.get('AbstractText', "No information found.")
+
+def sendEmail(to, content):
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.ehlo()
+    server.starttls()
+    server.login('ahmadleo498@gmail.com', os.getenv('EMAIL_PASSWORD'))
+    server.sendmail('ahmadleo498@gmail.com', to, content)
+    server.close()
+
+def download_youtube_content(url, download_path):
+    ydl_opts = {'format': 'best', 'outtmpl': f'{download_path}/%(title)s.%(ext)s'}
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url])
+
+if __name__ == "__main__":
+    api_key = "7271cae763955ac86c0b3dbdcd7f7f55"
+    
+    # Initialize TonyAI without a password
+    tony_ai = TonyAI(api_key)
+    
+    # Prompt the user to add a password after initialization
+    tony_ai.add_password()
+    
+    wishMe()
+    while True:
+        query = takeCommand().lower()
+        if 'time' in query:
+            strTime = datetime.datetime.now().strftime("%H:%M:%S")    
+            speak(f"Ahmad, the time is {strTime}")
+
+        elif 'date' in query:
+            current_datetime = datetime.datetime.now()
+            formatted_date = current_datetime.strftime("%Y-%m-%d")
+            speak(f"Today's date is {formatted_date}")
+            print(f"Today's date is {formatted_date}")
+
+        elif 'open code' in query:
+            codePath = "C:/Users/Ahmad/AppData/Local/Programs/Microsoft VS Code/Code.exe"
+            os.startfile(codePath)
+
+        elif 'search' in query:
+            query = query.replace("search", "")
+            results = search_duckduckgo(query)
+            speak("According to DuckDuckGo")
+            speak(results)
+
+        elif 'weather' in query:
+            city = "Islamabad"
+            temp_unit = 1  # 1 for Celsius, 2 for Fahrenheit
+            tony_ai.get_weather(city, temp_unit)
+
+        elif 'exit' in query:
+            speak("Goodbye Ahmad!")
+            break
+
+        elif 'add password' in query:
+            # Add or update the password
+            tony_ai.add_password()
+
+        elif 'verify password' in query:
+            # Prompt the user to enter the password
+            speak("Please enter the password:")
+            input_password = getpass.getpass("Enter password: ")
+            if tony_ai.verify_password(input_password):
+                # If password is correct, proceed with further actions
+                speak("You can now proceed with other commands.")
